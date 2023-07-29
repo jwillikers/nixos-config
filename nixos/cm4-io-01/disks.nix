@@ -1,6 +1,6 @@
 { disks ? [ "/dev/sda" ], ... }:
 let
-  defaultXfsOpts = [ "defaults" "relatime" "nodiratime" ];
+  defaultBtrfsOpts = [ "defaults" "autodefrag" "commit=120" "compress=zstd" "nodiratime" "relatime" ];
 in
 {
   disko.devices = {

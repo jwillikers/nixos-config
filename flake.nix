@@ -16,6 +16,14 @@
     nix-formatter-pack.inputs.nixpkgs.follows = "nixpkgs";
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+
+    # Configuration file repositories
+    openssh-config = {
+      type = "github";
+      owner = "jwillikers";
+      repo = "openssh-config";
+      flake = false;
+    };
   };
   outputs =
     { self

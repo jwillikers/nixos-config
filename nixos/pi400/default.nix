@@ -4,6 +4,7 @@
     inputs.nixos-hardware.nixosModules.raspberry-pi.4
     (import ./disks.nix { })
     ../_mixins/hardware/systemd-boot.nix
+    ../_mixins/services/openssh.nix
     ../_mixins/services/tailscale.nix
   ];
 
@@ -14,13 +15,7 @@
 
   boot = {
     initrd.availableKernelModules = [
-      "ahci"
-      "nvme"
-      "rtsx_pci_sdmmc"
-      "sd_mod"
-      "sdhci_pci"
-      "uas"
-      "usbhid"
+      "usbhid" 
       "usb_storage"
       "xhci_pci"
     ];

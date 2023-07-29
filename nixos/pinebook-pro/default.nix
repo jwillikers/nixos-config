@@ -8,7 +8,8 @@
     ../_mixins/hardware/systemd-boot.nix
     ../_mixins/services/bluetooth.nix
     ../_mixins/services/pipewire.nix
-    ../_mixins/services/zerotier.nix
+    ../_mixins/services/sway.nix
+    ../_mixins/services/tailscale.nix
     ../_mixins/virt
   ];
 

@@ -1,11 +1,11 @@
 { disks ? [ "/dev/sda" ], ... }:
 let
-  defaultXfsOpts = [ "defaults" "relatime" "nodiratime" ];
+  defaultBtrfsOpts = [ "defaults" "autodefrag" "commit=120" "compress=zstd" "nodiratime" "relatime" ];
 in
 {
   disko.devices = {
     disk = {
-      nvme0 = {
+      sda = {
         type = "disk";
         device = builtins.elemAt disks 0;
         content = {
@@ -32,9 +32,9 @@ in
                 type = "filesystem";
                 # Overwirte the existing filesystem
                 extraArgs = [ "-f" ];
-                format = "xfs";
+                format = "btrfs";
                 mountpoint = "/";
-                mountOptions = defaultXfsOpts;
+                mountOptions = defaultBtrfsOpts;
               };
             }];
         };

@@ -1,6 +1,6 @@
 { disks ? [ "/dev/vda" ], ... }:
 let
-  defaultXfsOpts = [ "defaults" "relatime" "nodiratime" ];
+  defaultBtrfsOpts = [ "defaults" "autodefrag" "commit=120" "compress=zstd" "nodiratime" "relatime" ];
 in
 {
   disko.devices = {
@@ -38,9 +38,9 @@ in
                 type = "filesystem";
                 # Overwirte the existing filesystem
                 extraArgs = [ "-f" ];
-                format = "xfs";
+                format = "btrfs";
                 mountpoint = "/";
-                mountOptions = defaultXfsOpts;
+                mountOptions = defaultBtrfsOpts;
               };
             }];
         };

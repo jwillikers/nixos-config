@@ -68,9 +68,11 @@
       vim
     ];
     systemPackages = with pkgs; [
+      git
       nushell
       pciutils
       psmisc
+      tmux
       unzip
       usbutils
     ];

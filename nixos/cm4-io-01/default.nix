@@ -14,6 +14,9 @@
     size = 4*1024;
   }];
 
+  # Disable the OpenSSH server to lock-down the backup server.
+  services.openssh.enable = false;
+
   boot = {
     initrd.availableKernelModules = [
       "ahci"

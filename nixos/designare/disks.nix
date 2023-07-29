@@ -1,11 +1,11 @@
-{ disks ? [ "/dev/nvme0n1" "/dev/nvme1n1" ], ... }:
+{ disks ? [ "/dev/sda" "/dev/sdb" ], ... }:
 let
-  defaultXfsOpts = [ "defaults" "relatime" "nodiratime" ];
+  defaultBtrfsOpts = [ "defaults" "autodefrag" "commit=120" "compress=zstd" "nodiratime" "relatime" ];
 in
 {
   disko.devices = {
     disk = {
-      nvme0 = {
+      sda = {
         type = "disk";
         device = builtins.elemAt disks 0;
         content = {
@@ -32,14 +32,14 @@ in
                 type = "filesystem";
                 # Overwirte the existing filesystem
                 extraArgs = [ "-f" ];
-                format = "xfs";
+                format = "btrfs";
                 mountpoint = "/";
-                mountOptions = defaultXfsOpts;
+                mountOptions = defaultBtrfsOpts;
               };
             }];
         };
       };
-      nvme1 = {
+      sdb = {
         type = "disk";
         device = builtins.elemAt disks 1;
         content = {
@@ -53,9 +53,9 @@ in
               type = "filesystem";
               # Overwirte the existing filesystem
               extraArgs = [ "-f" ];
-              format = "xfs";
+              format = "btrfs";
               mountpoint = "/home";
-              mountOptions = defaultXfsOpts;
+              mountOptions = defaultBtrfsOpts;
             };
           }];
         };
