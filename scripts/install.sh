@@ -11,7 +11,7 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 if [ ! -d "$HOME/Zero/nix-config/.git" ]; then
-  git clone https://github.com/jwillikers/nix-config.git "$HOME/Zero/nix-config"
+  # git clone https://github.com/jwillikers/nix-config.git "$HOME/Zero/nix-config"
 fi
 
 pushd "$HOME/Zero/nix-config"
