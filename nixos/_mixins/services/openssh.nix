@@ -12,8 +12,8 @@
   programs.ssh.startAgent = true;
   networking.firewall.allowedTCPPorts = [ 22 ];
 
-  environment.etc = {
-    "ssh/ssh_config.d".source = openssh-config.outPath + "/ssh/ssh_config.d";
-    "ssh/sshd_config.d".source = openssh-config.outPath + "/ssh/sshd_config.d";
-  };
+  # environment.etc = {
+  #   "ssh/ssh_config.d".source = inputs.openssh-config.outPath + "/ssh/ssh_config.d";
+  #   "ssh/sshd_config.d".source = inputs.openssh-config.outPath + "/ssh/sshd_config.d";
+  # };
 }

@@ -2,7 +2,9 @@
 {
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
-    (import ./disks.nix { })
+    # inputs.nixpkgs.nixos.modules.installer.sd-card.sd-image-raspberrypi
+    "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-raspberrypi.nix"
+    # (import ./disks.nix { })
     ../_mixins/hardware/systemd-boot.nix
     ../_mixins/services/openssh.nix
     ../_mixins/services/tailscale.nix
@@ -23,7 +25,9 @@
   };
 
 
-  environment.systemPackages = with pkgs; [];
+  environment.systemPackages = with pkgs; [
+    foot
+  ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
 }

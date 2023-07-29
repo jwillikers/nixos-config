@@ -58,6 +58,8 @@
         iso-desktop = libx.mkHost { hostname = "iso-desktop"; username = "nixos"; installer = nixpkgs + "/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"; desktop = "pantheon"; };
         iso-gpd-edp = libx.mkHost { hostname = "iso-gpd-edp"; username = "nixos"; installer = nixpkgs + "/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"; desktop = "pantheon"; };
         iso-gpd-dsi = libx.mkHost { hostname = "iso-gpd-dsi"; username = "nixos"; installer = nixpkgs + "/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"; desktop = "pantheon"; };
+        pi400-sd-image = libx.mkHost { hostname = "pi400-sd-image"; username = "jordan"; };
+        # SD Images
         # Workstations
         #  - sudo nixos-rebuild switch --flake $HOME/Zero/nix-config
         #  - nix build .#nixosConfigurations.ripper.config.system.build.toplevel
