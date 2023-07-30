@@ -29,6 +29,8 @@
     { self
     , nix-formatter-pack
     , nixpkgs
+    , nixos-hardware
+    , openssh-config
     , ...
     } @ inputs:
     let
@@ -59,6 +61,7 @@
         iso-gpd-edp = libx.mkHost { hostname = "iso-gpd-edp"; username = "nixos"; installer = nixpkgs + "/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"; desktop = "pantheon"; };
         iso-gpd-dsi = libx.mkHost { hostname = "iso-gpd-dsi"; username = "nixos"; installer = nixpkgs + "/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"; desktop = "pantheon"; };
         pi400-sd-image = libx.mkHost { hostname = "pi400-sd-image"; username = "jordan"; installer = nixpkgs + "/nixos/modules/installer/sd-card/sd-image-aarch64-new-kernel.nix"; };
+        star64-sd-image = libx.mkHost { hostname = "star64-sd-image"; username = "jordan"; }; # installer = inputs.nixos-hardware + "/pine64/star64/sd-image.nix"; };
         # SD Images
         # Workstations
         #  - sudo nixos-rebuild switch --flake $HOME/Zero/nix-config

@@ -19,6 +19,6 @@
   forAllSystems = inputs.nixpkgs.lib.genAttrs [
     "aarch64-linux"
     "x86_64-linux"
-    "riscv-linux"
+    "riscv64-linux"
   ];
 }
