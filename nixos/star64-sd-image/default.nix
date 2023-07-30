@@ -1,11 +1,13 @@
 { inputs, lib, pkgs, ... }:
 {
+  # nixpkgs.crossSystem.system = "x86_64-linux";
+  # boot.binfmt.emulatedSystems = [ "riscv64-linux" ];
   imports = [
     # inputs.nixos-hardware.nixosModules.raspberry-pi-4
     # (import ./disks.nix { })
     # ../_mixins/hardware/systemd-boot.nix
     # inputs.nixos-hardware.nixosModules.star64
-    inputs.nixos-hardware + "/pine64/star64/sd-image.nix"
+    (inputs.nixos-hardware + "/pine64/star64/sd-image.nix")
     ../_mixins/services/openssh.nix
     ../_mixins/services/tailscale.nix
   ];
@@ -48,5 +50,5 @@
     foot
   ];
 
-  nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
+  nixpkgs.hostPlatform = lib.mkDefault "riscv64-linux";
 }

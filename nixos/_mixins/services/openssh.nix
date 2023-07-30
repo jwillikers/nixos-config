@@ -1,4 +1,4 @@
-{ lib, openssh-config, ... }: {
+{ lib, inputs, ... }: {
   services = {
     # todo
     openssh = {
@@ -13,7 +13,7 @@
   networking.firewall.allowedTCPPorts = [ 22 ];
 
   environment.etc = {
-    "ssh/ssh_config.d".source = openssh-config + "/ssh/ssh_config.d";
-    "ssh/sshd_config.d".source = openssh-config + "/ssh/sshd_config.d";
+    "ssh/ssh_config.d".source = inputs.openssh-config + "/ssh/ssh_config.d";
+    "ssh/sshd_config.d".source = inputs.openssh-config + "/ssh/sshd_config.d";
   };
 }
