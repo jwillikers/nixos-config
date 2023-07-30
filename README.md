@@ -49,6 +49,36 @@ The [nixos/_mixins] and [home-manager/_mixins] are a collection of composited co
 
 ## Installing 💾
 
+### SD Card or eMMC
+
+1. Enter the development environment.
+
+```sh
+nix develop
+```
+
+1. Build the SD image.
+
+```sh
+nix build .#nixosConfigurations.iso-console.config.system.build.isoImage
+```
+
+1. Decompress the image.
+
+```sh
+unzstd -k result/sd-image/nixos-sd-image-23.05.20230728.48e82fe-aarch64-linux.img.zst
+```
+
+1. Write the image to the SD card.
+  In this example, the SD card is `/dev/mmcblk1`.
+  Find this with `lsblk`.
+
+```sh
+sudo dd if=nixos-sd-image-23.05.20230728.48e82fe-aarch64-linux.img of=/dev/mmcblk1 bs=4M status=progress conv=fdatasync
+```
+
+### ISO Installer
+
 - Boot off a .iso image created by this flake using `rebuild-iso-desktop` or `rebuild-iso-console` (*see below*)
 - Put the .iso image on a USB drive
 - Boot the target computer from the USB drive

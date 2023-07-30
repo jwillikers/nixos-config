@@ -1,1 +1,4 @@
 .direnv*
+result/
+*.img
+*.img.zst
