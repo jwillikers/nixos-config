@@ -60,7 +60,7 @@ nix develop
 1. Build the SD image.
 
 ```sh
-nix build .#nixosConfigurations.iso-console.config.system.build.isoImage
+nix build .#nixosConfigurations.pi400-sd-image.config.system.build.sdImage
 ```
 
 1. Decompress the image.
