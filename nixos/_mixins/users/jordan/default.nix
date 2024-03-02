@@ -1,19 +1,90 @@
-{ config, desktop, lib, pkgs, ... }:
+  { config, desktop, hostname, inputs, lib, pkgs, platform, username, ... }:
 let
-  ifExists = groups: builtins.filter (group: builtins.hasAttr group config.users.groups) groups;
+  isWorkstation = if (desktop != null) then true else false;
+  # https://nixos.wiki/wiki/OBS_Studio
+  isStreamstation = if (hostname == "phasma" || hostname == "vader") && (isWorkstation) then true else false;
 in
 {
-  # Only include desktop components if one is supplied.
-  imports = [ ] ++ lib.optional (builtins.isString desktop) ./desktop.nix;
 
-  environment.systemPackages = [
-    # pkgs.yadm # Terminal dot file manager
-  ];
+  environment.systemPackages = (with pkgs; [
+    bitwarden-cli
+  ] ++ lib.optionals (isWorkstation) [
+    bitwarden
+    zoom-us
+  ]) ++ (with pkgs.unstable; lib.optionals (isWorkstation) [
+    chromium
+    firefox
+    microsoft-edge
+  ])
+
+  programs = {
+    chromium = lib.mkIf (isWorkstation) {
+      extensions = [
+        "nngceckbapebfimnlniiiahkandclblb" # BitWarden
+        "fnaicdffflnofjppbagibeoednhnbjhg" # Floccus Bookmark Sync
+        "cjpalhdlnbpafiamejdnhcphjbkeiagm" # UBlock Origin
+        "dbepggeogbaibhgnhhndojpepiihcmeb" # Vimium
+      ];
+    };
+  #   dconf.profiles.user.databases = [{
+  #     settings = with lib.gvariant; lib.mkIf (isWorkstation) {
+  #       "io/elementary/terminal/settings" = {
+  #         unsafe-paste-alert = false;
+  #       };
+
+  #       "net/launchpad/plank/docks/dock1" = {
+  #         dock-items = [ "brave-browser.dockitem" "authy.dockitem" "Wavebox.dockitem" "org.telegram.desktop.dockitem" "discord.dockitem" "nheko.dockitem" "code.dockitem" "GitKraken.dockitem" "com.obsproject.Studio.dockitem" ];
+  #       };
+
+  #       "org/gnome/desktop/input-sources" = {
+  #         xkb-options = [ "grp:alt_shift_toggle" "caps:none" ];
+  #       };
+
+  #       "org/gnome/desktop/wm/preferences" = {
+  #         num-workspaces = mkInt32 8;
+  #         workspace-names = [ "Web" "Work" "Chat" "Code" "Virt" "Cast" "Fun" "Stuff" ];
+  #       };
+
+  #       "org/gnome/shell" = {
+  #         disabled-extensions = mkEmptyArray type.string;
+  #         favorite-apps = [ "brave-browser.desktop" "authy.desktop" "Wavebox.desktop" "org.telegram.desktop.desktop" "discord.desktop" "nheko.desktop" "code.desktop" "GitKraken.desktop" "com.obsproject.Studio.desktop" ];
+  #       };
+
+  #       "org/gnome/shell/extensions/auto-move-windows" = {
+  #         application-list = [ "brave-browser.desktop:1" "Wavebox.desktop:2" "discord.desktop:2" "org.telegram.desktop.desktop:3" "nheko.desktop:3" "code.desktop:4" "GitKraken.desktop:4" "com.obsproject.Studio.desktop:6" ];
+  #       };
+
+  #       "org/gnome/shell/extensions/tiling-assistant" = {
+  #         show-layout-panel-indicator = true;
+  #       };
+
+  #       "org/mate/desktop/peripherals/keyboard/kbd" = {
+  #         options = [ "terminate\tterminate:ctrl_alt_bksp" "caps\tcaps:none" ];
+  #       };
+
+  #       "org/mate/marco/general" = {
+  #         num-workspaces = mkInt32 8;
+  #       };
+
+  #       "org/mate/marco/workspace-names" = {
+  #         name-1 = " Web ";
+  #         name-2 = " Work ";
+  #         name-3 = " Chat ";
+  #         name-4 = " Code ";
+  #         name-5 = " Virt ";
+  #         name-6 = " Cast ";
+  #         name-7 = " Fun ";
+  #         name-8 = " Stuff ";
+  #       };
+  #     };
+  #   }];
+  # };
 
   users.users.jordan = {
     description = "Jordan Williams";
     extraGroups = [
       "audio"
+      "dialout"
       "input"
       "networkmanager"
       "users"

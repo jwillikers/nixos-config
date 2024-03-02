@@ -1,17 +1,22 @@
-{ config, desktop, hostname, inputs, lib, modulesPath, outputs, pkgs, stateVersion, username, ... }: {
+{ config, desktop, hostname, inputs, lib, modulesPath, outputs, pkgs, platform, stateVersion, username, ... }:
+let
+  notVM = if (hostname == "minimech" || hostname == "scrubber" || builtins.substring 0 5 hostname == "lima-") then false else true;
+  # Create some variable to control what doesn't get installed/enabled
+  isInstall = if (builtins.substring 0 4 hostname != "iso-") then true else false;
+  isWorkstation = if (desktop != null) then true else false;
+  hasNvidia = lib.elem "nvidia" config.services.xserver.videoDrivers;
+in
+{
   imports = [
     inputs.disko.nixosModules.disko
+    inputs.nix-index-database.nixosModules.nix-index
+    inputs.nix-snapd.nixosModules.default
+    inputs.sops-nix.nixosModules.sops
     (modulesPath + "/installer/scan/not-detected.nix")
     ./${hostname}
-    ./_mixins/services/firewall.nix
-    ./_mixins/services/fwupd.nix
-    ./_mixins/services/kmscon.nix
-    ./_mixins/services/openssh.nix
-    ./_mixins/services/smartmon.nix
-    ./_mixins/services/tailscale.nix
-    ./_mixins/users/root
-    ./_mixins/users/${username}
-  ] ++ lib.optional (builtins.isString desktop) ./_mixins/desktop;
+    ./_mixins/scripts
+    ./_mixins/users
+  ] ++ lib.optional (isWorkstation) ./_mixins/desktop;
 
   boot = {
     consoleLogLevel = 0;
@@ -24,14 +29,25 @@
       "rd.udev.log_level=3"
       "udev.log_priority=3"
     ];
-    # kernel.sysctl = {
-    #   "net.ipv4.ip_forward" = 1;
-    #   "net.ipv6.conf.all.forwarding" = 1;
-    # };
+    kernelPackages = pkgs.linuxPackages_latest;
+    kernel.sysctl = {
+      "net.ipv4.ip_forward" = 1;
+      "net.ipv6.conf.all.forwarding" = 1;
+      # Keep zram swap (lz4) latency in check
+      "vm.page-cluster" = 1;
+    };
+    # Only enable the systemd-boot on installs, not live media (.ISO images)
+    loader = lib.mkIf (isInstall) {
+      efi.canTouchEfiVariables = true;
+      systemd-boot.configurationLimit = 10;
+      systemd-boot.consoleMode = "max";
+      systemd-boot.enable = true;
+      systemd-boot.memtest86.enable = true;
+      timeout = 10;
+    };
   };
 
   console = {
-    earlySetup = true;
     font = "${pkgs.tamzen}/share/consolefonts/TamzenForPowerline10x20.psf";
     keyMap = "us";
     packages = with pkgs; [ tamzen ];
@@ -52,7 +68,7 @@
     };
   };
   services.xserver.layout = "us";
-  time.timeZone = "America/Chicago";
+  time.timeZone = "US/Central";
 
   # Only install the docs I use
   documentation.enable = true;
@@ -62,20 +78,45 @@
   documentation.doc.enable = false;
 
   environment = {
+    # Eject nano and perl from the system
     defaultPackages = with pkgs; lib.mkForce [
-      gitMinimal
-      home-manager
-      vim
+      coreutils-full
+      micro
+      util-linux
     ];
+
     systemPackages = with pkgs; [
+      age
       git
+      ssh-to-age
+      sops
+      just
       nushell
-      pciutils
-      psmisc
       tmux
-      unzip
-      usbutils
+    ] ++ lib.optionals (isInstall) [
+      inputs.crafts-flake.packages.${platform}.snapcraft
+      inputs.fh.packages.${platform}.default
+      clinfo
+      unstable.distrobox
+      flyctl
+      fuse-overlayfs
+      libva-utils
+      nvme-cli
+      #https://nixos.wiki/wiki/Podman
+      podman-compose
+      podman-tui
+      podman
+      smartmontools
+    ] ++ lib.optionals (isInstall && isWorkstation && notVM) [
+      pods
+      quickemu
+    ] ++ lib.optionals (isInstall && hasNvidia) [
+      nvtop
+      vdpauinfo
+    ]  ++ lib.optionals (isInstall && !hasNvidia) [
+      nvtop-amd
     ];
+
     variables = {
       EDITOR = "vim";
       SYSTEMD_EDITOR = "vim";
@@ -83,40 +124,16 @@
     };
   };
 
-  fonts = {
-    fontDir.enable = true;
-    fonts = with pkgs; [
-      (nerdfonts.override { fonts = [ "FiraCode" "SourceCodePro" "UbuntuMono" ]; })
-      fira
-      fira-go
-      joypixels
-      liberation_ttf
-      noto-fonts-emoji
-      source-serif
-      ubuntu_font_family
-      work-sans
-    ];
-
-    # Enable a basic set of fonts providing several font styles and families and reasonable coverage of Unicode.
-    enableDefaultFonts = false;
-
-    fontconfig = {
-      antialias = true;
-      defaultFonts = {
-        serif = [ "Source Serif" ];
-        sansSerif = [ "Work Sans" "Fira Sans" "FiraGO" ];
-        monospace = [ "FiraCode Nerd Font Mono" "SauceCodePro Nerd Font Mono" ];
-        emoji = [ "Joypixels" "Noto Color Emoji" ];
-      };
+  hardware = {
+    # https://nixos.wiki/wiki/Bluetooth
+    bluetooth = {
       enable = true;
-      hinting = {
-        autohint = false;
-        enable = true;
-        style = "hintslight";
-      };
-      subpixel = {
-        rgba = "rgb";
-        lcdfilter = "light";
+      package = pkgs.bluez;
+      settings = {
+        General = {
+          Enable = "Source,Sink,Media,Socket";
+          Experimental = true;
+        };
       };
     };
   };
@@ -134,6 +151,11 @@
       10.1.0.52 zero-2w-02
       10.1.0.51 cm4-io-02
     '';
+    firewall = {
+      enable = true;
+      allowedTCPPorts = [ 22 ]
+      trustedInterfaces = lib.mkIf (isInstall) [ "lxdbr0" ];
+    };
     hostName = hostname;
     useDHCP = lib.mkDefault true;
     domain = "jwillikers.io";
@@ -146,30 +168,19 @@
       outputs.overlays.additions
       outputs.overlays.modifications
       outputs.overlays.unstable-packages
-
-      # You can also add overlays exported from other flakes:
-      # neovim-nightly-overlay.overlays.default
-
-      # Or define it inline, for example:
-      # (final: prev: {
-      #   hi = final.hello.overrideAttrs (oldAttrs: {
-      #     patches = [ ./change-hello-to-hi.patch ];
-      #   });
-      # })
+      # Add overlays exported from other flakes:
     ];
     # Configure your nixpkgs instance
     config = {
       # Disable if you don't want unfree packages
       allowUnfree = true;
-      # Accept the joypixels license
-      joypixels.acceptLicense = true;
     };
   };
 
   nix = {
     gc = {
       automatic = true;
-      options = "--delete-older-than 14d";
+      options = "--delete-older-than 10d";
     };
 
     # This will add each flake input as a registry
@@ -185,11 +196,19 @@
     settings = {
       auto-optimise-store = true;
       experimental-features = [ "nix-command" "flakes" ];
+
+      # Avoid unwanted garbage collection when using nix-direnv
+      keep-outputs = true;
+      keep-derivations = true;
+
+      warn-dirty = false;
     };
   };
+  nixpkgs.hostPlatform = lib.mkDefault "${platform}";
 
   programs = {
     command-not-found.enable = false;
+    dconf.enable = true;
     fish = {
       enable = true;
       interactiveShellInit = ''
@@ -225,34 +244,135 @@
         set -U fish_pager_color_progress brwhite '--background=cyan'
       '';
       shellAbbrs = {
-        nix-gc = "sudo nix-collect-garbage --delete-older-than 14d";
-        rebuild-all = "sudo nix-collect-garbage --delete-older-than 14d && sudo nixos-rebuild switch --flake $HOME/Zero/nix-config && home-manager switch -b backup --flake $HOME/Zero/nix-config";
-        rebuild-home = "home-manager switch -b backup --flake $HOME/Zero/nix-config";
-        rebuild-host = "sudo nixos-rebuild switch --flake $HOME/Zero/nix-config";
-        rebuild-lock = "pushd $HOME/Zero/nix-config && nix flake lock --recreate-lock-file && popd";
-        rebuild-iso-console = "sudo true && pushd $HOME/Zero/nix-config && nix build .#nixosConfigurations.iso-console.config.system.build.isoImage && set ISO (head -n1 result/nix-support/hydra-build-products | cut -d'/' -f6) && sudo cp result/iso/$ISO ~/Quickemu/nixos-console/nixos.iso && popd";
-        rebuild-iso-desktop = "sudo true && pushd $HOME/Zero/nix-config && nix build .#nixosConfigurations.iso-desktop.config.system.build.isoImage && set ISO (head -n1 result/nix-support/hydra-build-products | cut -d'/' -f6) && sudo cp result/iso/$ISO ~/Quickemu/nixos-desktop/nixos.iso && popd";
-        rebuild-iso-gpd-edp = "sudo true && pushd $HOME/Zero/nix-config && nix build .#nixosConfigurations.iso-gpd-edp.config.system.build.isoImage && set ISO (head -n1 result/nix-support/hydra-build-products | cut -d'/' -f6) && sudo cp result/iso/$ISO ~/Quickemu/nixos-gpd-edp.iso && popd";
-        rebuild-iso-gpd-dsi = "sudo true && pushd $HOME/Zero/nix-config && nix build .#nixosConfigurations.iso-gpd-dsi.config.system.build.isoImage && set ISO (head -n1 result/nix-support/hydra-build-products | cut -d'/' -f6) && sudo cp result/iso/$ISO ~/Quickemu/nixos-gpd-dsi.iso && popd";
+        captive-portal = "${pkgs.xdg-utils}/bin/xdg-open http://$(${pkgs.iproute2}/bin/ip --oneline route get 1.1.1.1 | ${pkgs.gawk}/bin/awk '{print $3}'";
+        nix-gc = "sudo ${pkgs.unstable.nix}/bin/nix-collect-garbage --delete-older-than 10d && ${pkgs.unstable.nix}/bin/nix-collect-garbage --delete-older-than 10d";
+        update-lock = "pushd $HOME/Zero/nix-config && ${pkgs.unstable.nix}/bin/nix flake update && popd";
       };
       shellAliases = {
-        wttr = "curl -s wttr.in && curl -s v2.wttr.in";
-        wttr-bas = "curl -s wttr.in/basingstoke && curl -s v2.wttr.in/basingstoke";
+        nano = "micro";
       };
     };
-    # todo vim.
+    nano.enable = lib.mkDefault false;
+    nix-index-database.comma.enable = isInstall;
+    nix-ld.enable = isInstall;
+    ssh.startAgent = true;
+  };
+
+  services = {
+    avahi = {
+      enable = true;
+      nssmdns = true;
+      # Only open the avahi firewall ports on servers
+      openFirewall = isWorkstation;
+      publish = {
+        addresses = true;
+      	enable = true;
+      	workstation = isWorkstation;
+      };
+    };
+    fwupd.enable = isInstall;
+    hardware.bolt.enable = true;
+    kmscon = lib.mkIf (isInstall) {
+      enable = true;
+      hwRender = true;
+      fonts = [{
+        name = "FiraCode Nerd Font Mono";
+        package = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
+      }];
+      extraConfig = ''
+        font-size=14
+        xkb-layout=gb
+      '';
+    };
+    openssh = {
+      enable = true;
+      settings = {
+        PasswordAuthentication = false;
+        PermitRootLogin = lib.mkDefault "no";
+      };
+    };
+    smartd.enable = isInstall;
+    snap.enable = isInstall;
+    sshguard = {
+      enable = true;
+      whitelist = [
+        "192.168.2.0/24"
+        "192.168.192.0/24"
+        "62.31.16.154"
+        "80.209.186.67"
+      ];
+    };
+  };
+
+  sops = lib.mkIf (isInstall) {
+    age = {
+      keyFile = "/home/${username}/.config/sops/age/keys.txt";
+      generateKey = false;
+    };
+    defaultSopsFile = ../secrets/secrets.yaml;
+    # sops-nix options: https://dl.thalheim.io/
+    secrets.test-key = {};
+  };
+
+  # Enable Multi-Gen LRU:
+  # - https://docs.kernel.org/next/admin-guide/mm/multigen_lru.html
+  # - Inspired by: https://github.com/hakavlad/mg-lru-helper
+  systemd.services."mglru" = {
+    enable = true;
+    wantedBy = ["basic.target"];
+    script = ''
+      ${pkgs.coreutils-full}/bin/echo 1000 > /sys/kernel/mm/lru_gen/min_ttl_ms
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+    };
+    unitConfig = {
+      ConditionPathExists = "/sys/kernel/mm/lru_gen/enabled";
+      Description = "Configure Enable Multi-Gen LRU";
+    };
+  };
+
+  # Disable hiberate and hybrid-sleep when using zram.
+  systemd.targets.hibernate.enable = false;
+  systemd.targets.hybrid-sleep.enable = false;
+  # Enable zram
+  # - https://github.com/ecdye/zram-config/blob/main/README.md#performance
+  # - https://www.reddit.com/r/Fedora/comments/mzun99/new_zram_tuning_benchmarks/
+  # - https://linuxreviews.org/Zram
+  zramSwap = {
+    algorithm = "lz4";
+    enable = true;
   };
 
   systemd.tmpfiles.rules = [
     "d /nix/var/nix/profiles/per-user/${username} 0755 ${username} root"
-    "d /mnt/snapshot/${username} 0755 ${username} users"
   ];
 
-  system.activationScripts.diff = {
-    supportsDryActivation = true;
-    text = ''
-      ${pkgs.nvd}/bin/nvd --nix-bin-dir=${pkgs.nix}/bin diff /run/current-system "$systemConfig"
-    '';
+  system = {
+    activationScripts.diff = lib.mkIf (isInstall) {
+      supportsDryActivation = true;
+      text = ''
+        if [ -e /run/current-system/boot.json ] && ! ${pkgs.gnugrep}/bin/grep -q "LABEL=nixos-minimal" /run/current-system/boot.json; then
+          ${pkgs.nvd}/bin/nvd --nix-bin-dir=${pkgs.unstable.nix}/bin diff /run/current-system "$systemConfig"
+        fi
+      '';
+    };
+    nixos.label = lib.mkIf (isInstall) "-";
+    stateVersion = stateVersion;
   };
-  system.stateVersion = stateVersion;
+
+  virtualisation = lib.mkIf (isInstall) {
+    lxd = {
+      enable = true;
+    };
+    podman = {
+      defaultNetwork.settings = {
+        dns_enabled = true;
+      };
+      dockerCompat = true;
+      dockerSocket.enable = true;
+      enable = true;
+      enableNvidia = lib.elem "nvidia" config.services.xserver.videoDrivers;
+    };
+  };
 }

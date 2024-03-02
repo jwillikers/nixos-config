@@ -11,6 +11,10 @@
     # example = prev.example.overrideAttrs (oldAttrs: rec {
     # ...
     # });
+    icinga2 = prev.icinga2.overrideAttrs (oldAttrs: rec {
+      withMysql = false;
+      withPostgresql = true;
+    });
   };
 
   # When applied, the unstable nixpkgs set (declared in the flake inputs) will

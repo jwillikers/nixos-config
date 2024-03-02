@@ -20,30 +20,16 @@
   };
 
   programs = {
-    atuin = {
-      enable = true;
-      enableBashIntegration = true;
-      enableFishIntegration = true;
-      flags = [
-        "--disable-up-arrow"
-      ];
-      package = pkgs.unstable.atuin;
-      settings = {
-        auto_sync = true;
-        dialect = "uk";
-        show_preview = true;
-        style = "compact";
-        sync_frequency = "1h";
-        sync_address = "https://api.atuin.sh";
-        update_check = false;
-      };
-    };
     bat = {
       enable = true;
       extraPackages = with pkgs.bat-extras; [
+        batgrep
         batwatch
         prettybat
       ];
+      config = {
+        style = "plain";
+      };
     };
     dircolors = {
       enable = true;
@@ -106,6 +92,7 @@
     };
     gpg.enable = true;
     home-manager.enable = true;
+    nix-index.enable = true;
     info.enable = true;
     jq.enable = true;
     vim = {
@@ -122,12 +109,12 @@
   };
 
   # Nicely reload system units when changing configs
-  systemd.user.startServices = "sd-switch";
+  systemd.user.startServices = lib.mkIf isLinux "sd-switch";
 
   xdg = {
-    enable = true;
+    enable = isLinux;
     userDirs = {
-      enable = true;
+      enable = isLinux;
       createDirectories = lib.mkDefault true;
       extraConfig = {
         XDG_SCREENSHOTS_DIR = "${config.home.homeDirectory}/Pictures/Screenshots";
